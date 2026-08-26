@@ -1,0 +1,8 @@
+env: staging
+storage_account:
+paths:
+  landing: abfss://landing@adlsdataplatformstaging.dfs.core.windows.net/
+  bronze: abfss://bronze@adlsdataplatformstaging.dfs.core.windows.net/
+  silver: abfss://silver@adlsdataplatformstaging.dfs.core.windows.net/
+  gold: abfss://gold@adlsdataplatformstaging.dfs.core.windows.net/
+  quarantine: abfss://quarantine@adlsdataplatformstaging.dfs.core.windows.net/
