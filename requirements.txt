@@ -8,3 +8,4 @@ pyarrow
 azure-identity
 azure-storage-file-datalake
 pyspark
+azure-keyvault-secrets

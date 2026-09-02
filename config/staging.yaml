@@ -14,3 +14,5 @@ apis:
   vehiclepos: https://api.transport.nsw.gov.au/v2/gtfs/vehiclepos/sydneytrains
   realtime: https://api.transport.nsw.gov.au/v2/gtfs/realtime/sydneytrains
   alerts: https://api.transport.nsw.gov.au/v2/gtfs/alerts/sydneytrains
+
+key_vault_name: kvdataplatformstaging

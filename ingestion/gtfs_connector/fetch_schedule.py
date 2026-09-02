@@ -2,16 +2,13 @@ import requests
 from google.transit import gtfs_realtime_pb2
 import zipfile
 import io
-import os
-from dotenv import load_dotenv
 from pathlib import Path
 import argparse
 import sys
 from datetime import datetime, timezone
 from azure.identity import DefaultAzureCredential
 from azure.storage.filedatalake import DataLakeServiceClient
-
-load_dotenv()
+from azure.keyvault.secrets import SecretClient
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env", default="staging")
@@ -24,13 +21,22 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from dataplatform.config import load_config
 
-API_KEY = os.getenv("NSW_TRANSPORT_API_KEY")
+
+ENDPOINTS = load_config(env)
+
+KEY_VAULT_NAME = ENDPOINTS["key_vault_name"]   # add to your config yaml
+KV_URI = f"https://{KEY_VAULT_NAME}.vault.azure.net"
+
+credential = DefaultAzureCredential()
+secret_client = SecretClient(vault_url=KV_URI, credential=credential)
+
+API_KEY = secret_client.get_secret("nsw-transport-api-key").value
+
 
 HEADERS = {
     "Authorization": f"apikey {API_KEY}"
 }
 
-ENDPOINTS = load_config(env)
 
 run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
@@ -39,7 +45,6 @@ print(ENDPOINTS)
 # Set up ADLS client
 storage_account = ENDPOINTS["storage_account"]
 account_url = f"https://{storage_account}.dfs.core.windows.net"
-credential = DefaultAzureCredential()
 service_client = DataLakeServiceClient(account_url, credential)
 file_system_client = service_client.get_file_system_client("landing")
 
