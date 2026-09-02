@@ -1,0 +1,10 @@
+requests
+google
+gtfs-realtime-bindings
+python-dotenv
+dotenv
+PyYAML
+pyarrow
+azure-identity
+azure-storage-file-datalake
+pyspark

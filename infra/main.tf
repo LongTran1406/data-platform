@@ -30,6 +30,39 @@ resource "azurerm_key_vault" "kv" {
     rbac_authorization_enabled = true
 }
 
+data "azurerm_client_config" "current" {}
+
+# Your local identity — write access, so Terraform can create secrets
+resource "azurerm_role_assignment" "dev_kv_officer" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id          = data.azurerm_client_config.current.object_id
+}
+
+# Your local identity — read access, for local script testing
+resource "azurerm_role_assignment" "dev_kv_reader" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id          = data.azurerm_client_config.current.object_id
+}
+
+# Databricks job identity — read-only, never Officer
+resource "azurerm_role_assignment" "job_kv_reader" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id          = var.databricks_job_identity_object_id   # confirm this value first — see step 0 note below
+}
+
+resource "azurerm_key_vault_secret" "nsw_transport_api_key" {
+  name         = "nsw-transport-api-key"
+  value        = var.nsw_transport_api_key
+  key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [
+    azurerm_role_assignment.dev_kv_officer
+  ]
+}
+
 // 3. databricks
 resource "azurerm_databricks_workspace" "db" {
     name = "db${var.project_name}${var.env}"
@@ -43,4 +76,12 @@ resource "azurerm_monitor_workspace" "monitor" {
   name                = "monitor${var.project_name}${var.env}"
   resource_group_name = azurerm_resource_group.data_platform.name
   location            = var.resource_group_location
+}
+
+data "azurerm_client_config" "current" {}
+
+resource "azurerm_role_assignment" "storage_blob_data_contributor" {
+  scope                = azurerm_storage_account.adls.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
 }

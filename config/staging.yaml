@@ -1,8 +1,16 @@
 env: staging
-storage_account:
+
+storage_account: adlsdataplatformstaging
+
 paths:
   landing: abfss://landing@adlsdataplatformstaging.dfs.core.windows.net/
   bronze: abfss://bronze@adlsdataplatformstaging.dfs.core.windows.net/
   silver: abfss://silver@adlsdataplatformstaging.dfs.core.windows.net/
   gold: abfss://gold@adlsdataplatformstaging.dfs.core.windows.net/
   quarantine: abfss://quarantine@adlsdataplatformstaging.dfs.core.windows.net/
+
+apis:
+  schedule: https://api.transport.nsw.gov.au/v1/gtfs/schedule/sydneytrains
+  vehiclepos: https://api.transport.nsw.gov.au/v2/gtfs/vehiclepos/sydneytrains
+  realtime: https://api.transport.nsw.gov.au/v2/gtfs/realtime/sydneytrains
+  alerts: https://api.transport.nsw.gov.au/v2/gtfs/alerts/sydneytrains

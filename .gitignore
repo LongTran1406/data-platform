@@ -16,3 +16,5 @@ terraform.rc
 
 # Keep the lock file though
 !.terraform.lock.hcl
+
+.env
