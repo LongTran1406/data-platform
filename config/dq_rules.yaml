@@ -1,0 +1,48 @@
+stops:
+  not_null: [stop_id, stop_name, stop_lat, stop_lon]
+  unique: [stop_id]
+  ranges:
+    stop_lat: [-90, 90]
+    stop_lon: [-180, 180]
+  allowed_values:
+    location_type: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    wheelchair_boarding: [0, 1, 2]
+
+routes:
+  not_null: [route_id, route_type]
+  unique: [route_id]
+  allowed_values:
+    route_type: [0, 1, 2, 3, 4, 5, 6, 7]
+
+trips:
+  not_null: [route_id, service_id, trip_id]
+  unique: [trip_id]
+  allowed_values:
+    direction_id: [0, 1]
+    wheelchair_accessible: [0, 1, 2]
+
+stop_times:
+  not_null: [trip_id, stop_id, stop_sequence, arrival_time, departure_time]
+  unique: [trip_id, stop_sequence]
+  allowed_values:
+    pickup_type: [0, 1, 2, 3]
+    drop_off_type: [0, 1, 2, 3]
+
+vehiclepos:
+  not_null: [entity_id, trip_id, vehicle_timestamp]
+  unique: [entity_id]
+  ranges:
+    latitude: [-90, 90]
+    longitude: [-180, 180]
+    bearing: [0, 360]
+
+realtime:
+  not_null: [entity_id, trip_id]
+  unique: [entity_id]
+
+alerts:
+  not_null: [entity_id, cause, effect]
+  unique: [entity_id]
+  allowed_values:
+    cause: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    effect: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]

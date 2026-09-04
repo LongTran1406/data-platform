@@ -8,3 +8,9 @@ def load_config(env: str = None):
     with open(path, 'r') as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)
     return data
+
+def load_dq_rules():
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "dq_rules.yaml")
+    with open(path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.SafeLoader)
+    return data

@@ -15,4 +15,4 @@ targets:
   staging:
     mode: development
     workspace:
-      host: https://adb-7405605605975544.4.azuredatabricks.net
+      host: https://adb-7405615635837629.9.azuredatabricks.net

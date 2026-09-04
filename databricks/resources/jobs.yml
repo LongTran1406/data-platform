@@ -44,6 +44,16 @@ resources:
               - "vehiclepos"
               - "realtime"
               - "alerts"
+        - task_key: clean_transform_silver
+          depends_on:
+            - task_key: ingest_raw
+            - task_key: ingest_realtime
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/silver/clean_transform.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
       job_clusters:
         - job_cluster_key: job_cluster
           new_cluster:
