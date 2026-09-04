@@ -4,13 +4,10 @@ resources:
       name: "${bundle.target}-fetch-schedule"
       tasks:
         - task_key: fetch_schedule
+          job_cluster_key: job_cluster
           spark_python_task:
             python_file: ../../ingestion/gtfs_connector/fetch_schedule.py
             parameters: ["--env", "${bundle.target}"]
-          new_cluster:
-            spark_version: "15.4.x-scala2.12"
-            node_type_id: "Standard_DS3_v2"
-            num_workers: 0
           libraries:
             - pypi:
                 package: azure-identity
@@ -20,10 +17,48 @@ resources:
                 package: azure-keyvault-secrets
             - pypi:
                 package: gtfs-realtime-bindings
-          spark_env_vars:
-            AZURE_CLIENT_ID: "{{secrets/bootstrap-creds/sp-client-id}}"
-            AZURE_TENANT_ID: "{{secrets/bootstrap-creds/sp-tenant-id}}"
-            AZURE_CLIENT_SECRET: "{{secrets/bootstrap-creds/sp-client-secret}}"
+        - task_key: ingest_raw
+          depends_on:
+            - task_key: fetch_schedule
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/bronze/ingest_raw.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+              - "--tables"
+              - "routes"
+              - "stop_times"
+              - "stops"
+              - "trips"
+        - task_key: ingest_realtime
+          depends_on:
+            - task_key: fetch_schedule
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/bronze/ingest_realtime.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+              - "--feeds"
+              - "vehiclepos"
+              - "realtime"
+              - "alerts"
+      job_clusters:
+        - job_cluster_key: job_cluster
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_D4s_v3"
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              AZURE_CLIENT_ID: "{{secrets/bootstrap-creds/sp-client-id}}"
+              AZURE_TENANT_ID: "{{secrets/bootstrap-creds/sp-tenant-id}}"
+              AZURE_CLIENT_SECRET: "{{secrets/bootstrap-creds/sp-client-secret}}"
       schedule:
         quartz_cron_expression: "0 */15 * * * ?"
         timezone_id: "UTC"

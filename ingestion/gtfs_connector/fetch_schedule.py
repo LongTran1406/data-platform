@@ -16,7 +16,14 @@ parser.add_argument("--env", default="staging")
 args = parser.parse_args()
 env = args.env
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+try:
+    _script_path = Path(__file__).resolve()
+except NameError:
+    # Databricks spark_python_task execs the file without setting __file__,
+    # but populates sys.argv[0] with the script's absolute workspace path.
+    _script_path = Path(sys.argv[0]).resolve()
+
+PROJECT_ROOT = _script_path.parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from dataplatform.config import load_config
@@ -24,7 +31,7 @@ from dataplatform.config import load_config
 
 ENDPOINTS = load_config(env)
 
-KEY_VAULT_NAME = ENDPOINTS["key_vault_name"]   # add to your config yaml
+KEY_VAULT_NAME = ENDPOINTS["key_vault_name"]
 KV_URI = f"https://{KEY_VAULT_NAME}.vault.azure.net"
 
 credential = DefaultAzureCredential()
@@ -39,8 +46,6 @@ HEADERS = {
 
 
 run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-print(ENDPOINTS)
 
 # Set up ADLS client
 storage_account = ENDPOINTS["storage_account"]

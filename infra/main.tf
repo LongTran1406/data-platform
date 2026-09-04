@@ -155,3 +155,33 @@ resource "azurerm_role_assignment" "job_storage_blob_data_contributor" {
   role_definition_name = "Storage Blob Data Contributor"
   principal_id          = azuread_service_principal.db_job.object_id
 }
+
+# Register the AAD service principal inside the Databricks workspace
+resource "databricks_service_principal" "db_job" {
+  application_id = azuread_application.db_job.client_id
+  display_name   = azuread_application.db_job.display_name
+}
+
+# Grant the job's service principal read access to this scope
+resource "databricks_secret_acl" "job_bootstrap_read" {
+  scope      = databricks_secret_scope.bootstrap_creds.name
+  principal  = databricks_service_principal.db_job.application_id
+  permission = "READ"
+}
+
+# Grant your own user read access too, for local/manual `bundle run` testing
+resource "databricks_secret_acl" "dev_bootstrap_read" {
+  scope      = databricks_secret_scope.bootstrap_creds.name
+  principal  = "tranthelong1406@gmail.com"
+  permission = "READ"
+}
+
+data "azuread_service_principal" "databricks_platform" {
+  display_name = "AzureDatabricks"
+}
+
+resource "azurerm_role_assignment" "databricks_platform_kv_access" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id          = data.azuread_service_principal.databricks_platform.object_id
+}

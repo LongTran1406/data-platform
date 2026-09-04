@@ -1,0 +1,18 @@
+bundle:
+  name: data-platform
+
+include:
+  - resources/*.yml
+
+sync:
+  paths:
+    - ../ingestion
+    - ../src
+    - ../config
+    - .
+
+targets:
+  staging:
+    mode: development
+    workspace:
+      host: https://adb-7405605605975544.4.azuredatabricks.net
