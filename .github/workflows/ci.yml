@@ -1,0 +1,46 @@
+name: CI
+on: [pull_request]
+jobs:
+  test:
+    # environment: use a fresh ubuntu cloud computer hosted by github
+    runs-on: ubuntu-latest
+    steps:
+      # pull the code from github repo into this machine
+      - name: checkout code
+        uses: actions/checkout@v3
+      # set up the specific python run time
+      - name: set up python
+        uses: actions/setup-python@v5
+        with: 
+          python-version: '3.11'
+      - name: install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      # lint check
+      - name: install ruff
+        run: pip install ruff
+      - name: run ruff linter 
+        # fails the build if there are rule violations
+        run: ruff check .
+      # terraform check
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.0"
+      - name: terraform init
+        run: terraform init -backend=false
+        working-directory: ./infra 
+      - name: terraform validate
+        run: terraform validate
+        working-directory: ./infa 
+      # databrick bundle validate
+      - name: set up databricks cli
+        uses: databricks/setup@main
+      - name: validate configuration
+        run: databricks bundle validate -t staging
+        env:
+          DATABRICKS_HOST: ${{secrets.DATABRICKS_HOST}}
+          DATABRICKS_TOKEN: ${{secrets.DATABRICKS_TOKEN}}
+        working-directory: ./databricks
+      

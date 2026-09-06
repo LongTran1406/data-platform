@@ -14,3 +14,9 @@ def load_dq_rules():
     with open(path, 'r') as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)
     return data
+
+def load_gold_config():
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "gold_config.yaml")
+    with open(path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.SafeLoader)
+    return data

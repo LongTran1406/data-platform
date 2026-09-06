@@ -14,5 +14,3 @@ sync:
 targets:
   staging:
     mode: development
-    workspace:
-      host: https://adb-7405615635837629.9.azuredatabricks.net

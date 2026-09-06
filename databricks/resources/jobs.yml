@@ -54,6 +54,15 @@ resources:
             parameters:
               - "--env"
               - "${bundle.target}"
+        - task_key: build_gold_bi
+          depends_on:
+            - task_key: clean_transform_silver
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/gold/bi_star_schema.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
       job_clusters:
         - job_cluster_key: job_cluster
           new_cluster:
