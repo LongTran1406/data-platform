@@ -1,5 +1,4 @@
 import requests
-from google.transit import gtfs_realtime_pb2
 import zipfile
 import io
 from pathlib import Path
