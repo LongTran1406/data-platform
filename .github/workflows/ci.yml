@@ -36,7 +36,7 @@ jobs:
         working-directory: ./infa 
       # databrick bundle validate
       - name: set up databricks cli
-        uses: databricks/setup@main
+        uses: databricks/setup-cli@main
       - name: validate configuration
         run: databricks bundle validate -t staging
         env:
