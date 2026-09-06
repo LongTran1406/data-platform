@@ -33,10 +33,10 @@ jobs:
         working-directory: ./infra 
       - name: terraform validate
         run: terraform validate
-        working-directory: ./infa 
+        working-directory: ./infra 
       # databrick bundle validate
       - name: set up databricks cli
-        uses: databricks/setup@main
+        uses: databricks/setup-cli@main
       - name: validate configuration
         run: databricks bundle validate -t staging
         env:
