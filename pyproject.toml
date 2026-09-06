@@ -1,0 +1,3 @@
+[tool.ruff.lint]
+# Only check for things that indicate an actual bug, not style preferences.
+select = ["F"]   # pyflakes: unused imports, undefined names, unused variables, etc.
