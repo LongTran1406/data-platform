@@ -22,4 +22,5 @@ provider "azurerm" {
 provider "databricks" {
   host                        = azurerm_databricks_workspace.db.workspace_url
   azure_workspace_resource_id = azurerm_databricks_workspace.db.id
+  auth_type                   = "azure-cli"
 }

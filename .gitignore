@@ -20,3 +20,7 @@ terraform.rc
 .env
 
 __pycache__/
+
+# Azure Functions
+local.settings.json
+.python_packages

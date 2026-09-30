@@ -1,0 +1,89 @@
+{
+  "datasets": [
+    {
+      "catalog": "dbdataplatformstaging_7405616153600996",
+      "displayName": "Daily Aggregate Route Performance Data",
+      "name": "2c715541",
+      "queryLines": [
+        "select * from gold.agg_route_daily_performance;"
+      ],
+      "schema": "gold"
+    },
+    {
+      "catalog": "dbdataplatformstaging_7405616153600996",
+      "displayName": "Flight Arrival Performance Records",
+      "name": "66637889",
+      "queryLines": [
+        "select * from gold.fact_on_time_performance;"
+      ],
+      "schema": "gold"
+    }
+  ],
+  "pages": [
+    {
+      "displayName": "test",
+      "layout": [
+        {
+          "position": {
+            "height": 6,
+            "width": 6,
+            "x": 0,
+            "y": 0
+          },
+          "widget": {
+            "name": "9636dfba",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "2c715541",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`route_short_name`",
+                      "name": "route_short_name"
+                    },
+                    {
+                      "expression": "SUM(`pct_on_time`)",
+                      "name": "sum(pct_on_time)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "data": {
+                "queryName": "main_query"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "route_short_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(pct_on_time)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          }
+        }
+      ],
+      "layoutVersion": "GRID_V1",
+      "name": "3bf86daa",
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "applyModeEnabled": false,
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}

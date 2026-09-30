@@ -65,13 +65,22 @@ def build_on_time_performance(spark, cfg: dict, on_time_threshold_seconds: int) 
     return fact_df, agg_df
 
 
-def write_gold_tables(cfg: dict, fact_df: DataFrame, agg_df: DataFrame):
-    gold = cfg["paths"]["gold"]
-    fact_path = f"{gold}gtfs/fact_on_time_performance/"
-    agg_path = f"{gold}gtfs/agg_route_daily_performance/"
+def write_gold_tables(spark, schema: str, fact_df: DataFrame, agg_df: DataFrame):
+    catalog = spark.sql("SELECT current_catalog()").first()[0]
+    if catalog == "hive_metastore":
+        raise RuntimeError(
+            "The job's default catalog is hive_metastore. Gold tables must be "
+            "written to a Unity Catalog catalog so the dashboard can read them."
+        )
 
-    fact_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(fact_path)
-    agg_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(agg_path)
+    # Unqualified schema/table names resolve inside the current (workspace) catalog
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {schema}")
 
-    print(f"Wrote {fact_df.count()} rows to {fact_path}")
-    print(f"Wrote {agg_df.count()} rows to {agg_path}")
+    tables = {
+        "fact_on_time_performance": fact_df,
+        "agg_route_daily_performance": agg_df,
+    }
+    for name, df in tables.items():
+        full_name = f"{schema}.{name}"
+        df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(full_name)
+        print(f"Wrote {spark.table(full_name).count()} rows to {catalog}.{full_name}")

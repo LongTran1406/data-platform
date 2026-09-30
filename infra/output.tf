@@ -14,3 +14,11 @@ output "db_job_client_secret" {
   value     = azuread_service_principal_password.db_job.value
   sensitive = true
 }
+
+output "function_app_name" {
+  value = azurerm_linux_function_app.fetch.name
+}
+
+output "function_app_hostname" {
+  value = azurerm_linux_function_app.fetch.default_hostname
+}

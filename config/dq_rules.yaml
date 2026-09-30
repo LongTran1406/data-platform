@@ -30,7 +30,7 @@ stop_times:
 
 vehiclepos:
   not_null: [entity_id, trip_id, vehicle_timestamp]
-  unique: [entity_id]
+  unique: [trip_id, vehicle_timestamp]
   ranges:
     latitude: [-90, 90]
     longitude: [-180, 180]

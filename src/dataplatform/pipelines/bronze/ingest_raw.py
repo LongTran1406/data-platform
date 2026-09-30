@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import current_timestamp, input_file_name
+from pyspark.sql.functions import col, current_timestamp
 import argparse
 import sys
 from pathlib import Path
@@ -14,19 +14,28 @@ PROJECT_ROOT = _script_path.parents[4]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from dataplatform.config import load_config
+from dataplatform.pipelines.bronze.incremental import find_new_files
 
 
-def ingest_raw_txt(spark, source_path: str, bronze_path: str):
-    df = (spark.read
-      .format("csv")
-      .option("header", "true")
-      .option("inferSchema", "false")
-      .load(source_path)) \
-    .withColumn("_ingested_at", current_timestamp()) \
-    .withColumn("_source_file", input_file_name())
+def ingest_raw_txt(spark, source_glob: str, bronze_path: str):
+    # Only files that bronze hasn't recorded in _source_file yet
+    new_files = find_new_files(spark, source_glob, bronze_path)
+    if not new_files:
+        print(f"{bronze_path}: no new files, nothing to ingest")
+        return
+
+    df = (
+        spark.read
+        .format("csv")
+        .option("header", "true")
+        .option("inferSchema", "false")
+        .load(new_files)
+        .withColumn("_ingested_at", current_timestamp())
+        .withColumn("_source_file", col("_metadata.file_path"))
+    )
     df.write.format("delta").mode("append").option("mergeSchema", "true").save(bronze_path)
-    count = df.count()
-    print(f"Wrote {count} rows to {bronze_path}")
+    print(f"Ingested {len(new_files)} new file(s) into {bronze_path}")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -41,10 +50,10 @@ def main():
     # so we build its full address here and reuse it below
     account_suffix = f"{storage_account}.dfs.core.windows.net"
 
-    # Tell Spark to login using OAuth (client ID + secrete), not a plain storage key
+    # Tell Spark to login using OAuth (client ID + secret), not a plain storage key
     spark.conf.set(f"fs.azure.account.auth.type.{account_suffix}", "OAuth")
 
-    # Login as an an app/service not a person
+    # Login as an app/service, not a person
     spark.conf.set(
         f"fs.azure.account.oauth.provider.type.{account_suffix}",
         "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider",
@@ -64,9 +73,10 @@ def main():
     )
 
     for table in args.tables:
-        source_path = f"{cfg['paths']['landing']}gtfs/schedule/*/*/{table}.txt"
+        source_glob = f"{cfg['paths']['landing']}gtfs/schedule/*/*/{table}.txt"
         bronze_path = f"{cfg['paths']['bronze']}gtfs/{table}/"
-        ingest_raw_txt(spark, source_path, bronze_path)
+        ingest_raw_txt(spark, source_glob, bronze_path)
+
 
 if __name__ == "__main__":
     main()

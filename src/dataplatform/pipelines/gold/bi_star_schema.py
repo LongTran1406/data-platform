@@ -41,4 +41,4 @@ if __name__ == "__main__":
     fact_df, agg_df = build_on_time_performance(
         spark, cfg, gold_config["on_time_threshold_seconds"]
     )
-    write_gold_tables(cfg, fact_df, agg_df)
+    write_gold_tables(spark, gold_config["schema"], fact_df, agg_df)

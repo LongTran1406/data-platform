@@ -185,3 +185,101 @@ resource "azurerm_role_assignment" "databricks_platform_kv_access" {
   role_definition_name = "Key Vault Secrets User"
   principal_id          = data.azuread_service_principal.databricks_platform.object_id
 }
+# =============================================================================
+# 5. Azure Function App (timer-triggered GTFS fetch: realtime + schedule)
+# =============================================================================
+
+# Single source of truth for API URLs: the same YAML the Databricks code reads
+locals {
+  cfg = yamldecode(file("${path.module}/../config/${var.env}.yaml"))
+}
+
+# Function app names are globally unique (they become <name>.azurewebsites.net)
+resource "random_string" "func_suffix" {
+  length  = 4
+  upper   = false
+  special = false
+}
+
+# Storage the Functions host uses internally (state, triggers, logs).
+# Must be a plain storage account, NOT the ADLS/HNS one.
+resource "azurerm_storage_account" "func" {
+  name                     = "stfn${var.project_name}${var.env}"
+  resource_group_name      = azurerm_resource_group.data_platform.name
+  location                 = var.resource_group_location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+# Logs and metrics, so you can see whether the 5-minute runs succeed
+resource "azurerm_log_analytics_workspace" "func" {
+  name                = "log-${var.project_name}-${var.env}"
+  resource_group_name = azurerm_resource_group.data_platform.name
+  location            = var.resource_group_location
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+resource "azurerm_application_insights" "func" {
+  name                = "appi-${var.project_name}-${var.env}"
+  resource_group_name = azurerm_resource_group.data_platform.name
+  location            = var.resource_group_location
+  workspace_id        = azurerm_log_analytics_workspace.func.id
+  application_type    = "other"
+}
+
+resource "azurerm_service_plan" "func" {
+  name                = "asp-${var.project_name}-${var.env}"
+  resource_group_name = azurerm_resource_group.data_platform.name
+  location            = var.resource_group_location
+  os_type             = "Linux"
+  sku_name            = "Y1" # Consumption: pay per execution
+}
+
+resource "azurerm_linux_function_app" "fetch" {
+  name                       = "func-${var.project_name}-${var.env}-${random_string.func_suffix.result}"
+  resource_group_name        = azurerm_resource_group.data_platform.name
+  location                   = var.resource_group_location
+  service_plan_id            = azurerm_service_plan.func.id
+  storage_account_name       = azurerm_storage_account.func.name
+  storage_account_access_key = azurerm_storage_account.func.primary_access_key
+
+  # The app's own identity. DefaultAzureCredential picks it up automatically,
+  # so no client secret is needed.
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    application_stack {
+      python_version = "3.11"
+    }
+    application_insights_connection_string = azurerm_application_insights.func.connection_string
+  }
+
+  app_settings = merge(
+    {
+      FUNCTIONS_WORKER_RUNTIME = "python"
+      KEY_VAULT_NAME           = azurerm_key_vault.kv.name
+      STORAGE_ACCOUNT          = azurerm_storage_account.adls.name
+    },
+    # -> API_URL_SCHEDULE, API_URL_VEHICLEPOS, API_URL_REALTIME, API_URL_ALERTS
+    { for k, v in local.cfg.apis : "API_URL_${upper(k)}" => v }
+  )
+}
+
+# Read the API key from Key Vault
+resource "azurerm_role_assignment" "func_kv_reader" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_linux_function_app.fetch.identity[0].principal_id
+  principal_type       = "ServicePrincipal"
+}
+
+# Write raw files into the landing container
+resource "azurerm_role_assignment" "func_storage_blob_data_contributor" {
+  scope                = azurerm_storage_account.adls.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_linux_function_app.fetch.identity[0].principal_id
+  principal_type       = "ServicePrincipal"
+}

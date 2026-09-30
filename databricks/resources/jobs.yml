@@ -1,25 +1,9 @@
 resources:
   jobs:
-    fetch_schedule_job:
-      name: "${bundle.target}-fetch-schedule"
+    pipeline_job:
+      name: "${bundle.target}-pipeline"
       tasks:
-        - task_key: fetch_schedule
-          job_cluster_key: job_cluster
-          spark_python_task:
-            python_file: ../../ingestion/gtfs_connector/fetch_schedule.py
-            parameters: ["--env", "${bundle.target}"]
-          libraries:
-            - pypi:
-                package: azure-identity
-            - pypi:
-                package: azure-storage-file-datalake
-            - pypi:
-                package: azure-keyvault-secrets
-            - pypi:
-                package: gtfs-realtime-bindings
         - task_key: ingest_raw
-          depends_on:
-            - task_key: fetch_schedule
           job_cluster_key: job_cluster
           spark_python_task:
             python_file: ../../src/dataplatform/pipelines/bronze/ingest_raw.py
@@ -32,8 +16,6 @@ resources:
               - "stops"
               - "trips"
         - task_key: ingest_realtime
-          depends_on:
-            - task_key: fetch_schedule
           job_cluster_key: job_cluster
           spark_python_task:
             python_file: ../../src/dataplatform/pipelines/bronze/ingest_realtime.py
@@ -44,6 +26,9 @@ resources:
               - "vehiclepos"
               - "realtime"
               - "alerts"
+          libraries:
+            - pypi:
+                package: gtfs-realtime-bindings
         - task_key: clean_transform_silver
           depends_on:
             - task_key: ingest_raw
@@ -69,6 +54,7 @@ resources:
             spark_version: "15.4.x-scala2.12"
             node_type_id: "Standard_D4s_v3"
             num_workers: 0
+            data_security_mode: SINGLE_USER
             spark_conf:
               spark.databricks.cluster.profile: singleNode
               spark.master: local[*]
@@ -79,6 +65,6 @@ resources:
               AZURE_TENANT_ID: "{{secrets/bootstrap-creds/sp-tenant-id}}"
               AZURE_CLIENT_SECRET: "{{secrets/bootstrap-creds/sp-client-secret}}"
       schedule:
-        quartz_cron_expression: "0 */15 * * * ?"
+        quartz_cron_expression: "0 0 * * * ?"
         timezone_id: "UTC"
         pause_status: "PAUSED"

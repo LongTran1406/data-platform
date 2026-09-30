@@ -17,6 +17,8 @@ PROJECT_ROOT = _script_path.parents[4]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from dataplatform.config import load_config
+from dataplatform.pipelines.bronze.incremental import find_new_files
+
 
 def parse_vehiclepos(feed, source_file):
     """Turn a VehiclePositions feed into one row per vehicle."""
@@ -40,6 +42,7 @@ def parse_vehiclepos(feed, source_file):
         })
     return rows
 
+
 def parse_realtime(feed, source_file):
     """Turn a TripUpdates feed into one row per trip.
     Per-stop delay details are kept as a JSON string, since each trip can
@@ -60,6 +63,7 @@ def parse_realtime(feed, source_file):
         })
     return rows
 
+
 def parse_alerts(feed, source_file):
     """Turn an Alerts feed into one row per alert."""
     rows = []
@@ -79,6 +83,7 @@ def parse_alerts(feed, source_file):
         })
     return rows
 
+
 # Maps the --feed name to the function that knows how to read that feed's shape
 FEED_PARSERS = {
     "vehiclepos": parse_vehiclepos,
@@ -86,12 +91,19 @@ FEED_PARSERS = {
     "alerts": parse_alerts,
 }
 
+
 def ingest_realtime_feed(spark, feed_type: str, source_glob: str, bronze_path: str):
     parse_fn = FEED_PARSERS[feed_type]
 
-    # Just fetch the raw file bytes with Spark (fast, reuses existing ABFS auth) -
+    # Only files that bronze hasn't recorded in _source_file yet
+    new_files = find_new_files(spark, source_glob, bronze_path)
+    if not new_files:
+        print(f"{feed_type}: no new files, nothing to ingest")
+        return
+
+    # Just fetch the raw file bytes with Spark (reuses existing ABFS auth) -
     # the actual protobuf decoding still happens below in plain Python.
-    bin_df = spark.read.format("binaryFile").load(source_glob)
+    bin_df = spark.read.format("binaryFile").load(new_files)
 
     rows = []
     for record in bin_df.select("path", "content").collect():
@@ -105,7 +117,8 @@ def ingest_realtime_feed(spark, feed_type: str, source_glob: str, bronze_path: s
 
     out_df = spark.createDataFrame(rows).withColumn("_ingested_at", current_timestamp())
     out_df.write.format("delta").mode("append").option("mergeSchema", "true").save(bronze_path)
-    print(f"Wrote {out_df.count()} rows to {bronze_path}")
+    print(f"Ingested {len(new_files)} new file(s) ({out_df.count()} rows) into {bronze_path}")
+
 
 def main():
     parser = argparse.ArgumentParser()
