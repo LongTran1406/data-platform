@@ -48,6 +48,29 @@ resources:
             parameters:
               - "--env"
               - "${bundle.target}"
+        - task_key: build_ml_features
+          depends_on:
+            - task_key: build_gold_bi
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/gold/build_ml_features.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+        - task_key: predict_delay
+          depends_on:
+            - task_key: build_ml_features
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/ml/predict_delay.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+          libraries:
+            - pypi:
+                package: scikit-learn
+            - pypi:
+                package: mlflow
       job_clusters:
         - job_cluster_key: job_cluster
           new_cluster:
@@ -66,5 +89,87 @@ resources:
               AZURE_CLIENT_SECRET: "{{secrets/bootstrap-creds/sp-client-secret}}"
       schedule:
         quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+        pause_status: "PAUSED"
+
+    ml_training_job:
+      name: "${bundle.target}-ml-training"
+      tasks:
+        - task_key: train_delay_model
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/ml/train_delay_model.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+          libraries:
+            - pypi:
+                package: scikit-learn
+            - pypi:
+                package: mlflow
+        - task_key: check_drift
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/ml/check_drift.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+          libraries:
+            - pypi:
+                package: scikit-learn
+            - pypi:
+                package: mlflow
+      job_clusters:
+        - job_cluster_key: job_cluster
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_D4s_v3"
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              AZURE_CLIENT_ID: "{{secrets/bootstrap-creds/sp-client-id}}"
+              AZURE_TENANT_ID: "{{secrets/bootstrap-creds/sp-tenant-id}}"
+              AZURE_CLIENT_SECRET: "{{secrets/bootstrap-creds/sp-client-secret}}"
+      # No schedule block - this job is only ever triggered manually,
+      # never on a fixed cadence.
+
+    drift_retrain_job:
+      name: "${bundle.target}-drift-retrain"
+      tasks:
+        - task_key: retrain_if_drifted
+          job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../../src/dataplatform/pipelines/ml/retrain_if_drifted.py
+            parameters:
+              - "--env"
+              - "${bundle.target}"
+          libraries:
+            - pypi:
+                package: scikit-learn
+            - pypi:
+                package: mlflow
+      job_clusters:
+        - job_cluster_key: job_cluster
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_D4s_v3"
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              AZURE_CLIENT_ID: "{{secrets/bootstrap-creds/sp-client-id}}"
+              AZURE_TENANT_ID: "{{secrets/bootstrap-creds/sp-tenant-id}}"
+              AZURE_CLIENT_SECRET: "{{secrets/bootstrap-creds/sp-client-secret}}"
+      schedule:
+        quartz_cron_expression: "0 0 18 * * ?"
         timezone_id: "UTC"
         pause_status: "PAUSED"

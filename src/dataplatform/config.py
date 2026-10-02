@@ -20,3 +20,9 @@ def load_gold_config():
     with open(path, 'r') as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)
     return data
+
+def load_ml_config():
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "ml_config.yaml")
+    with open(path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.SafeLoader)
+    return data

@@ -2,7 +2,7 @@ bundle:
   name: data-platform
 
 include:
-  - resources/*.yml
+  - resources/jobs.yml
 
 variables:
   warehouse_id:

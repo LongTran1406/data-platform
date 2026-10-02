@@ -1,0 +1,9 @@
+model_schema: ml
+model_name: trip_delay_model
+champion_alias: champion
+# Short values so training works on the first day of data - raise to
+# feature_lookback_hours: 168 (7 days) once enough history has accumulated.
+feature_lookback_hours: 3
+test_fraction: 0.2
+drift_check_window_days: 2
+drift_threshold: 0.05
